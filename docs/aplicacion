@@ -1,0 +1,387 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const FutControlApp());
+}
+
+class FutControlApp extends StatelessWidget {
+  const FutControlApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'FutControl',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      home: const LoginScreen(),
+    );
+  }
+}
+
+// ==========================================
+// MODELOS DE DATOS (Basados en erDiagram.md)
+// ==========================================
+
+class Usuario {
+  final int idUsuario;
+  final String nombre;
+  final String correo;
+  final String contrasena;
+
+  Usuario({
+    required this.idUsuario,
+    required this.nombre,
+    required this.correo,
+    required this.contrasena,
+  });
+}
+
+class Equipo {
+  int idEquipo;
+  String nombre;
+  String pais;
+  String liga;
+  String entrenador;
+  String estadio;
+
+  Equipo({
+    required this.idEquipo,
+    required this.nombre,
+    required this.pais,
+    required this.liga,
+    required this.entrenador,
+    required this.estadio,
+  });
+}
+
+// ==========================================
+// MOCK DATA (Datos de simulación)
+// ==========================================
+
+List<Usuario> mockUsuarios = [
+  Usuario(idUsuario: 1, nombre: 'Admin', correo: 'admin@futcontrol.com', contrasena: 'admin123'),
+];
+
+List<Equipo> mockEquipos = [
+  Equipo(idEquipo: 1, nombre: 'Real Madrid', pais: 'España', liga: 'LaLiga', entrenador: 'Carlo Ancelotti', estadio: 'Santiago Bernabéu'),
+  Equipo(idEquipo: 2, nombre: 'Manchester City', pais: 'Inglaterra', liga: 'Premier League', entrenador: 'Pep Guardiola', estadio: 'Etihad Stadium'),
+];
+
+// ==========================================
+// VISTA: INICIO DE SESIÓN (SRS.md)
+// ==========================================
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  void _login() {
+    if (_formKey.currentState!.validate()) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      // Validación simple con Mock Data
+      bool existe = mockUsuarios.any((u) => u.correo == email && u.contrasena == password);
+
+      if (existe) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('¡Inicio de sesión exitoso!'), backgroundColor: Colors.green),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Usuario o contraseña incorrectos'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('FutControl - Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Bienvenido a FutControl', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Correo electrónico', border: OutlineInputBorder()),
+                validator: (value) => value!.isEmpty ? 'Campo obligatorio' : null,
+              ),
+              const SizedBox(height: 15),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Contraseña', border: OutlineInputBorder()),
+                validator: (value) => value!.isEmpty ? 'Campo obligatorio' : null,
+              ),
+              const SizedBox(height: 25),
+              ElevatedButton(
+                onPressed: _login,
+                style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                child: const Text('Iniciar Sesión'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// VISTA: PRINCIPAL Y CONSULTA (Epic 2)
+// ==========================================
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  
+  void _actualizarLista() {
+    setState(() {});
+  }
+
+  void _eliminarEquipo(Equipo equipo) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar eliminación'),
+        content: Text('¿Está seguro de eliminar al ${equipo.nombre}?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Escenario: Eliminación no exitosa (Cancelada)
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Eliminación cancelada')),
+              );
+            },
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Escenario: Eliminación exitosa
+              setState(() {
+                mockEquipos.remove(equipo);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Equipo eliminado con éxito'), backgroundColor: Colors.green),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Equipos de Fútbol'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen())),
+          )
+        ],
+      ),
+      // Escenario: Consulta exitosa vs Consulta no exitosa ("No hay equipos registrados")
+      body: mockEquipos.isEmpty
+          ? const Center(child: Text('No hay equipos registrados', style: TextStyle(fontSize: 18, color: Colors.grey)))
+          : ListView.builder(
+              itemCount: mockEquipos.length,
+              itemBuilder: (context, index) {
+                final equipo = mockEquipos[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    title: Text(equipo.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${equipo.liga} (${equipo.pais}) \nDT: ${equipo.entrenador} | Estadio: ${equipo.estadio}'),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: () async {
+                            await Navigator.push(context, MaterialPageRoute(builder: (context) => FormEquipoScreen(equipo: equipo)));
+                            _actualizarLista();
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _eliminarEquipo(equipo),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () async {
+          await Navigator.push(context, MaterialPageRoute(builder: (context) => const FormEquipoScreen()));
+          _actualizarLista();
+        },
+      ),
+    );
+  }
+}
+
+// ==========================================
+// VISTA: FORMULARIO REGISTRO/EDICIÓN (Epic 1 y 3)
+// ==========================================
+
+class FormEquipoScreen extends StatefulWidget {
+  final Equipo? equipo; // Si es nulo es Registro, si tiene datos es Edición.
+  const FormEquipoScreen({super.key, this.equipo});
+
+  @override
+  State<FormEquipoScreen> createState() => _FormEquipoScreenState();
+}
+
+class _FormEquipoScreenState extends State<FormEquipoScreen> {
+  final _formKey = GlobalKey<FormState>();
+  
+  late TextEditingController _nombreCtrl;
+  late TextEditingController _paisCtrl;
+  late TextEditingController _ligaCtrl;
+  late TextEditingController _entrenadorCtrl;
+  late TextEditingController _estadioCtrl;
+
+  bool get esEdicion => widget.equipo != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreCtrl = TextEditingController(text: widget.equipo?.nombre ?? '');
+    _paisCtrl = TextEditingController(text: widget.equipo?.pais ?? '');
+    _ligaCtrl = TextEditingController(text: widget.equipo?.liga ?? '');
+    _entrenadorCtrl = TextEditingController(text: widget.equipo?.entrenador ?? '');
+    _estadioCtrl = TextEditingController(text: widget.equipo?.estadio ?? '');
+  }
+
+  void _guardar() {
+    // Escenarios no exitosos: Validación de campos obligatorios vacíos
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debe completar todos los campos obligatorios'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (esEdicion) {
+      // Epic 3: Actualización exitosa
+      widget.equipo!.nombre = _nombreCtrl.text.trim();
+      widget.equipo!.pais = _paisCtrl.text.trim();
+      widget.equipo!.liga = _ligaCtrl.text.trim();
+      widget.equipo!.entrenador = _entrenadorCtrl.text.trim();
+      widget.equipo!.estadio = _estadioCtrl.text.trim();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cambios guardados con éxito'), backgroundColor: Colors.green),
+      );
+    } else {
+      // Epic 1: Registro exitoso
+      final nuevoEquipo = Equipo(
+        idEquipo: mockEquipos.length + 1,
+        nombre: _nombreCtrl.text.trim(),
+        pais: _paisCtrl.text.trim(),
+        liga: _ligaCtrl.text.trim(),
+        entrenador: _entrenadorCtrl.text.trim(),
+        estadio: _estadioCtrl.text.trim(),
+      );
+      mockEquipos.add(nuevoEquipo);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Equipo registrado con éxito'), backgroundColor: Colors.green),
+      );
+    }
+
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(esEdicion ? 'Actualizar Equipo' : 'Registrar Equipo')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _nombreCtrl,
+                  decoration: const InputDecoration(labelText: 'Nombre del Equipo *'),
+                  validator: (value) => value!.trim().isEmpty ? 'Este campo es requerido' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _paisCtrl,
+                  decoration: const InputDecoration(labelText: 'País *'),
+                  validator: (value) => value!.trim().isEmpty ? 'Este campo es requerido' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _ligaCtrl,
+                  decoration: const InputDecoration(labelText: 'Liga *'),
+                  validator: (value) => value!.trim().isEmpty ? 'Este campo es requerido' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _entrenadorCtrl,
+                  decoration: const InputDecoration(labelText: 'Entrenador *'),
+                  validator: (value) => value!.trim().isEmpty ? 'Este campo es requerido' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _estadioCtrl,
+                  decoration: const InputDecoration(labelText: 'Estadio *'),
+                  validator: (value) => value!.trim().isEmpty ? 'Este campo es requerido' : null,
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _guardar,
+                  style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                  child: Text(esEdicion ? 'Actualizar' : 'Guardar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
